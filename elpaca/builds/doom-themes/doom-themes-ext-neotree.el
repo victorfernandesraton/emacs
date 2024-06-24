@@ -1,0 +1,1 @@
+/home/v_raton/.config/emacs/elpaca/repos/themes/extensions/doom-themes-ext-neotree.el

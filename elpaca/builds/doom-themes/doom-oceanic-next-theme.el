@@ -1,0 +1,1 @@
+/home/v_raton/.config/emacs/elpaca/repos/themes/themes/doom-oceanic-next-theme.el
