@@ -1,1 +1,0 @@
-/home/v_raton/.config/emacs/elpaca/repos/goto-chg/goto-chg.el

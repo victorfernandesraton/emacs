@@ -1,1 +1,0 @@
-/home/v_raton/.config/emacs/elpaca/repos/all-the-icons-dired/all-the-icons-dired.el
