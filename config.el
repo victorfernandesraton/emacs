@@ -1,121 +1,26 @@
-(defvar elpaca-installer-version 0.7)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil :depth 1
-                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                              :build (:not elpaca--activate-package)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-       (build (expand-file-name "elpaca/" elpaca-builds-directory))
-       (order (cdr elpaca-order))
-       (default-directory repo))
-  (add-to-list 'load-path (if (file-exists-p build) build repo))
-  (unless (file-exists-p repo)
-    (make-directory repo t)
-    (when (< emacs-major-version 28) (require 'subr-x))
-    (condition-case-unless-debug err
-        (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                 ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-                                                 ,@(when-let ((depth (plist-get order :depth)))
-                                                     (list (format "--depth=%d" depth) "--no-single-branch"))
-                                                 ,(plist-get order :repo) ,repo))))
-                 ((zerop (call-process "git" nil buffer t "checkout"
-                                       (or (plist-get order :ref) "--"))))
-                 (emacs (concat invocation-directory invocation-name))
-                 ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                       "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                 ((require 'elpaca))
-                 ((elpaca-generate-autoloads "elpaca" repo)))
-            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-          (error "%s" (with-current-buffer buffer (buffer-string))))
-      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-  (unless (require 'elpaca-autoloads nil t)
-    (require 'elpaca)
-    (elpaca-generate-autoloads "elpaca" repo)
-    (load "./elpaca-autoloads")))
-(add-hook 'after-init-hook #'elpaca-process-queues)
-(elpaca `(,@elpaca-order))
+(defvar bootstrap-version)
+    (let ((bootstrap-file
+	   (expand-file-name
+	    "straight/repos/straight.el/bootstrap.el"
+	    (or (bound-and-true-p straight-base-dir)
+		user-emacs-directory)))
+	  (bootstrap-version 7))
+      (unless (file-exists-p bootstrap-file)
+	(with-current-buffer
+	    (url-retrieve-synchronously
+	     "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+	     'silent 'inhibit-cookies)
+	  (goto-char (point-max))
+	  (eval-print-last-sexp)))
+      (load bootstrap-file nil 'nomessage))
 
-;; Install a package via the elpaca macro
-;; See the "recipes" section of the manual for more details.
+;; Install use-package
+(straight-use-package 'use-package)
 
-;; (elpaca example-package)
-
-;; Install use-package support
-(elpaca elpaca-use-package
-  ;; Enable use-package :ensure support for Elpaca.
-  (elpaca-use-package-mode))
-
-;;When installing a package which modifies a form used at the top-level
-;;(e.g. a package which adds a use-package key word),
-;;use the :wait recipe keyword to block until that package has been installed/configured.
-;;For example:
-;;(use-package general :ensure (:wait t) :demand t)
-
-;; Expands to: (elpaca evil (use-package evil :demand t))
-
-(use-package evil
-  :ensure t ;; install the evil package if not installed
-  :init ;; tweak evil's configuration before loading it
-  (setq evil-search-module 'evil-search)
-  (setq evil-ex-complete-emacs-commands nil)
-  (setq evil-vsplit-window-right t)
-  (setq evil-split-window-below t)
-  (setq evil-shift-round nil)
-  (setq evil-want-C-u-scroll t)
-  :config ;; tweak evil after loading it
-  (evil-mode)
- )
-
-
-;;Turns off elpaca-use-package-mode current declaration
-;;Note this will cause the declaration to be interpreted immediately (not deferred).
-;;Useful for configuring built-in emacs features.
-(use-package emacs :ensure nil :config (setq ring-bell-function #'ignore))
-
-(use-package general
- :ensure t 
-   :config
-  (general-evil-setup)
-
-  ;; set up 'SPC' as the global leader key
-  (general-create-definer vraton/leader-keys
-    :states '(normal insert visual emacs)
-    :keymaps 'override
-    :prefix "SPC" ;; set leader
-    :global-prefix "M-SPC") ;; access leader in insert mode
-
-  (vraton/leader-keys
-    "b" '(:ignore t :wk "buffer")
-    "bb" '(switch-to-buffer :wk "Switch buffer")
-    "bk" '(kill-this-buffer :wk "Kill this buffer")
-    "bn" '(next-buffer :wk "Next buffer")
-    "bp" '(previous-buffer :wk "Previous buffer")
-    "br" '(revert-buffer :wk "Reload buffer"))
-
-(vraton/leader-keys
-  "e" '(:ignore t :wk "Evaluate")    
-  "e b" '(eval-buffer :wk "Evaluate elisp in buffer")
-  "e d" '(eval-defun :wk "Evaluate defun containing or after point")
-  "e e" '(eval-expression :wk "Evaluate and elisp expression")
-  "e l" '(eval-last-sexp :wk "Evaluate elisp expression before point")
-  "e r" '(eval-region :wk "Evaluate elisp in region")) 
-
- (vraton/leader-keys
-  "h" '(:ignore t :wk "Help")
-  "h f" '(describe-function :wk "Describe function")
-  "h v" '(describe-variable :wk "Describe variable")
-  "h r r" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :wk "Reload emacs config"))
-  ;;"h r r" '(reload-init-file :wk "Reload emacs config"))
-
- (vraton/leader-keys
-  "t" '(:ignore t :wk "Toggle")
-  "t l" '(display-line-numbers-mode :wk "Toggle line numbers")
-  "t t" '(visual-line-mode :wk "Toggle truncated lines"))
-
-
-)
+;; Configure use-package to use straight.el by default
+(use-package straight
+  :custom
+  (straight-use-package-by-default t))
 
 (setq make-backup-files nil) ; stop creating ~ files
 
@@ -163,16 +68,82 @@
   ;; Display line numbers in every buffer
   (global-display-line-numbers-mode 1)
 
-  ;; Theme
- ;; (load-theme 'tango-dark t)
+(use-package autothemer :ensure t)
 
-(use-package doom-themes
-  :ensure t
-  :defer 0.3
-  :config
-  (setq doom-themes-enable-bold t)
-  (setq doom-themes-enable-italic t)
-  (load-theme 'doom-one t))
+(straight-use-package
+ '(rose-pine-emacs
+   :host github
+   :repo "thongpv87/rose-pine-emacs"
+   :branch "master"))
+(load-theme 'rose-pine-color t)
+
+(use-package evil
+      :ensure t ;; install the evil package if not installed
+      :init ;; tweak evil's configuration before loading it
+      (setq evil-search-module 'evil-search)
+      (setq evil-ex-complete-emacs-commands nil)
+      (setq evil-vsplit-window-right t)
+      (setq evil-split-window-below t)
+      (setq evil-shift-round nil)
+      (setq evil-want-C-u-scroll t)
+      (setq evil-want-keybinding nil)
+      :config ;; tweak evil after loading it
+      (evil-mode)
+     )
+  (use-package evil-collection
+    :after evil
+    :config
+    ;; Do not uncomment this unless you want to specify each and every mode
+    ;; that evil-collection should works with.  The following line is here 
+    ;; for documentation purposes in case you need it.  
+    ;; (setq evil-collection-mode-list '(calendar dashboard dired ediff info magit ibuffer))
+    (add-to-list 'evil-collection-mode-list 'help) ;; evilify help mode
+    (evil-collection-init))
+(with-eval-after-load 'evil-maps
+  (define-key evil-motion-state-map (kbd "SPC") nil)
+  (define-key evil-motion-state-map (kbd "RET") nil)
+  (define-key evil-motion-state-map (kbd "TAB") nil))
+
+(use-package general
+    :ensure t 
+    :config
+    (general-evil-setup)
+
+    ;; set up 'SPC' as the global leader key
+    (general-create-definer vraton/leader-keys
+      :states '(normal insert visual emacs)
+      :keymaps 'override
+      :prefix "SPC" ;; set leader
+      :global-prefix "M-SPC") ;; access leader in insert mode
+
+    (vraton/leader-keys
+      "b" '(:ignore t :wk "buffer")
+      "bb" '(switch-to-buffer :wk "Switch buffer")
+      "bk" '(kill-this-buffer :wk "Kill this buffer")
+      "bn" '(next-buffer :wk "Next buffer")
+      "bp" '(previous-buffer :wk "Previous buffer")
+      "br" '(revert-buffer :wk "Reload buffer"))
+
+    (vraton/leader-keys
+    "e" '(:ignore t :wk "Evaluate")    
+    "e b" '(eval-buffer :wk "Evaluate elisp in buffer")
+    "e d" '(eval-defun :wk "Evaluate defun containing or after point")
+    "e e" '(eval-expression :wk "Evaluate and elisp expression")
+    "e l" '(eval-last-sexp :wk "Evaluate elisp expression before point")
+    "e r" '(eval-region :wk "Evaluate elisp in region")) 
+
+    (vraton/leader-keys
+    "h" '(:ignore t :wk "Help")
+    "h f" '(describe-function :wk "Describe function")
+    "h v" '(describe-variable :wk "Describe variable")
+    "h r r" '((lambda () (interactive) (load-file "~/.config/emacs/init.el")) :wk "Reload emacs config"))
+    ;;"h r r" '(reload-init-file :wk "Reload emacs config"))
+
+    (vraton/leader-keys
+    "t" '(:ignore t :wk "Toggle")
+    "t l" '(display-line-numbers-mode :wk "Toggle line numbers")
+    "t t" '(visual-line-mode :wk "Toggle truncated lines"))
+)
 
 (use-package all-the-icons
   :ensure t
