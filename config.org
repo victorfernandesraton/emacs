@@ -14,7 +14,7 @@
   - [[#defining-the-various-fonts-that-emacs-will-use][Defining the various fonts that Emacs will use.]]
   - [[#zooming-inout][Zooming In/Out]]
 - [[#ui-stuff-and-theme-bulshit][UI stuff and theme bulshit]]
-  - [[#rose-pine-theme][Rose-pine theme]]
+  - [[#catpuchhin-theme][Catpuchhin theme]]
 - [[#enable-evil-mode][Enable Evil mode]]
   - [[#general-keybindings][General Keybindings]]
   - [[#doom-themes][Doom Themes]]
@@ -132,16 +132,12 @@ You can use the bindings CTRL plus =/- for zooming in/out.  You can also use CTR
   ;; Display line numbers in every buffer
   (global-display-line-numbers-mode 1)
 #+end_src
-** Rose-pine theme
+** Catpuchhin theme
 #+begin_src emacs-lisp
-    (use-package autothemer :ensure t)
-  
-  (straight-use-package
-   '(rose-pine-emacs
-     :host github
-     :repo "thongpv87/rose-pine-emacs"
-     :branch "master"))
-  (load-theme 'rose-pine-color t)
+  (use-package catppuccin-theme
+    :ensure t ;; somethin
+    )
+(load-theme 'catppuccin :no-confirm)
 #+end_src
 
 * Enable Evil mode

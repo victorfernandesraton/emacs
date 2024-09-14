@@ -70,14 +70,10 @@
   ;; Display line numbers in every buffer
   (global-display-line-numbers-mode 1)
 
-(use-package autothemer :ensure t)
-
-(straight-use-package
- '(rose-pine-emacs
-   :host github
-   :repo "thongpv87/rose-pine-emacs"
-   :branch "master"))
-(load-theme 'rose-pine-color t)
+(use-package catppuccin-theme
+    :ensure t ;; somethin
+    )
+(load-theme 'catppuccin :no-confirm)
 
 (use-package evil
       :ensure t ;; install the evil package if not installed
