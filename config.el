@@ -29,13 +29,13 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (set-face-attribute 'default nil
-  :font "MesloLGS NF 16"
+  :font "MesloLGS NF 14"
   :weight 'medium)
 (set-face-attribute 'variable-pitch nil
-  :font "MesloLGS NF 16"
+  :font "MesloLGS NF 14"
   :weight 'medium)
 (set-face-attribute 'fixed-pitch nil
-  :font "MesloLGS NF 16"
+  :font "MesloLGS NF 14"
   :weight 'medium)
 ;; Makes commented text and keywords italics.
 ;; This is working in emacsclient but not emacs.
@@ -48,7 +48,7 @@
 ;; This sets the default font on all graphical frames created after restarting Emacs.
 ;; Does the same thing as 'set-face-attribute default' above, but emacsclient fonts
 ;; are not right unless I also add this method of setting the default font.
-(add-to-list 'default-frame-alist '(font . "MesloLGS NF 16"))
+(add-to-list 'default-frame-alist '(font . "MesloLGS NF 14"))
 
 ;; Uncomment the following line if line spacing needs adjusting.
 (setq-default line-spacing 0.12)
@@ -70,10 +70,8 @@
   ;; Display line numbers in every buffer
   (global-display-line-numbers-mode 1)
 
-(use-package catppuccin-theme
-    :ensure t ;; somethin
-    )
-(load-theme 'catppuccin :no-confirm)
+(use-package gruvbox-theme :ensure t)
+(load-theme 'gruvbox-dark-medium :no-confirm)
 
 (use-package evil
       :ensure t ;; install the evil package if not installed
@@ -176,6 +174,12 @@
     "w L" '(buf-move-right :wk "Buffer move right")
     )
 
+  (vraton/leader-keys
+    ;; Directory commands
+    "d" '(:ignore t :wk "Dired")
+    "d d" '(dired :wk "Open Dired")
+   )
+
   )
 
 (use-package all-the-icons
@@ -196,17 +200,17 @@
     (which-key-mode 1)
   :config
   (setq which-key-side-window-location 'bottom
-	which-key-sort-order #'which-key-key-order-alpha
-	which-key-sort-uppercase-first nil
-	which-key-add-column-padding 1
-	which-key-max-display-columns nil
-	which-key-min-display-lines 6
-	which-key-side-window-slot -10
-	which-key-side-window-max-height 0.25
-	which-key-idle-delay 0.8
-	which-key-max-description-length 25
-	which-key-allow-imprecise-window-fit t
-	which-key-separator " → " ))
+        which-key-sort-order #'which-key-key-order-alpha
+        which-key-sort-uppercase-first nil
+        which-key-add-column-padding 1
+        which-key-max-display-columns nil
+        which-key-min-display-lines 8
+        which-key-side-window-slot -10
+        which-key-side-window-max-height 0.25
+        which-key-idle-delay 0.8
+        which-key-max-description-length 0.25
+	  which-key-allow-imprecise-window-fit t
+        which-key-separator " → " ))
 
 (use-package toc-org
   :ensure t
@@ -224,12 +228,19 @@
 (use-package sudo-edit
   :config
     (vraton/leader-keys
-      "fu" '(sudo-edit-find-file :wk "Sudo find file")
+      "ff" '(sudo-edit-find-file :wk "Sudo find file")
       "fU" '(sudo-edit :wk "Sudo edit file")))
 
 (use-package rainbow-mode
   :hook 
   ((org-mode prog-mode) . rainbow-mode))
+
+(use-package neotree
+  :ensure t
+    :config 
+    (vraton/leader-keys
+      "fe" '(neotree-toggle :wk "Show neotree"))
+    )
 
 (use-package eshell-syntax-highlighting
   :after esh-mode
@@ -249,10 +260,58 @@
       eshell-destroy-buffer-when-process-dies t
       eshell-visual-commands'("bash" "fish" "htop" "ssh" "top" "zsh"))
 
+(use-package auto-complete
+  :ensure t
+  :init
+  (progn
+    (ac-config-default)
+    (global-auto-complete-mode t)))
+
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+
+(use-package eglot
+     :hook (prog-mode . eglot-ensure)
+     :bind (("C-SPC" . completion-at-point)
+          (" ." . display-local-help)
+
+     )
+     :config (vraton/leader-keys
+     "vh" '(display-local-help :wk "Show local help"))
+(defvar complete-at-point--timer nil "Timer for triggering complete-at-point.")
+
+   (defun auto-complete-at-point (&rest _)
+     "Set a time to complete the current symbol at point in 0.1 seconds"
+     (when (and (not (minibufferp)))
+       ;; If a user inserts a character while a timer is active, reset
+       ;; the current timer
+       (when (timerp complete-at-point--timer)
+         (cancel-timer complete-at-point--timer))
+       (setq complete-at-point--timer
+             (run-at-time 0.2 nil
+                          (lambda ()
+                            ;; Clear out the timer and run
+                            ;; completion-at-point
+                            (when (timerp complete-at-point--timer)
+                              (cancel-timer complete-at-point--timer))
+                            (setq complete-at-point--timer nil)
+                            (completion-at-point))))))
+   ;; Add a hook to enable auto-complete-at-point when eglot is enabled
+   ;; this allows use to remove the hook on 'post-self-insert-hook if
+   ;; eglot is disabled in the current buffer
+   (add-hook 'eglot-managed-mode-hook (lambda ()
+                                        (if eglot--managed-mode
+                                            (add-hook 'post-self-insert-hook #'auto-complete-at-point nil t)
+                                          (remove-hook 'post-self-insert-hook #'auto-complete-at-point t)))))
+
+(use-package eldoc
+  :init
+  (global-eldoc-mode))
+
 (use-package vterm
-:config
-(setq shell-file-name "/bin/fish"
-      vterm-max-scrollback 5000))
+   :ensure t
+)
 
 (use-package vterm-toggle
   :after vterm
